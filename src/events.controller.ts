@@ -12,28 +12,46 @@ import {
 import { CreateEventDto } from './create-event.dto';
 import { UpdateEventDto } from './update-event.dto';
 import { Event } from './event.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Controller('/events')
 export class EventsController {
   private events: Event[] = [];
+
+  constructor(
+    @InjectRepository(Event)
+    private readonly repository: Repository<Event>,
+  ) {}
   @Get()
-  findAll() {
-    return this.events;
+  async findAll() {
+    return this.repository.find();
   }
   @Get(':id')
-  findOne(@Param('id') id) {
-    const event = this.events.find((event) => event.id === parseInt(id));
-    return id;
+  async findOne(@Param('id') id) {
+    const event = await this.repository.findOne(parseInt(id));
+    return event;
   }
   @Post()
-  create(@Body() input: CreateEventDto) {
-    return input;
+  async create(@Body() input: CreateEventDto) {
+    return await this.repository.save({
+      ...input,
+      when: new Date(input.when),
+    });
   }
   @Patch(':id')
-  update(@Param('id') id, @Body() input: UpdateEventDto) {
-    return input;
+  async update(@Param('id') id, @Body() input: UpdateEventDto) {
+    const event = await this.repository.findOne(id);
+
+    return await this.repository.save({
+      ...event,
+      ...input,
+    });
   }
   @Delete()
   @HttpCode(204)
-  remove(@Param('id') id) {}
+  async remove(@Param('id') id) {
+    const event = await this.repository.findOne(id);
+    return await this.repository.remove(event);
+  }
 }
